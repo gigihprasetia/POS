@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +20,7 @@ export default function UnitsSettings() {
 
   const [unitDialog, setUnitDialog] = useState(false);
   const [unitName, setUnitName] = useState('');
+  const [unitCategory, setUnitCategory] = useState<"BERAT" | "KEMASAN" | "VOLUME" | "LAINNYA">("LAINNYA");
   const [unitEditId, setUnitEditId] = useState<number | null>(null);
   const [unitOriginalName, setUnitOriginalName] = useState('');
   const [unitDeleteTarget, setUnitDeleteTarget] = useState<Unit | null>(null);
@@ -26,12 +29,14 @@ export default function UnitsSettings() {
   const openUnitAdd = () => {
     setUnitEditId(null);
     setUnitName('');
+    setUnitCategory('LAINNYA');
     setUnitOriginalName('');
     setUnitDialog(true);
   };
   const openUnitEdit = (u: Unit) => {
     setUnitEditId(u.id!);
     setUnitName(u.name);
+    setUnitCategory(u.category || 'LAINNYA');
     setUnitOriginalName(u.name);
     setUnitDialog(true);
   };
@@ -53,7 +58,7 @@ export default function UnitsSettings() {
 
     try {
       if (unitEditId) {
-        await db.units.update(unitEditId, { name });
+        await db.units.update(unitEditId, { name, category: unitCategory });
         // Cascade rename to all products using the old name so the dropdown stays consistent
         if (unitOriginalName && unitOriginalName !== name) {
           await db.products.where('unit').equals(unitOriginalName).modify({ unit: name, updatedAt: new Date() });
@@ -65,6 +70,7 @@ export default function UnitsSettings() {
           createdAt: new Date(),
           isDeleted: 0,
           deletedAt: null,
+          category: unitCategory,
         });
       }
       setUnitDialog(false);
@@ -109,7 +115,12 @@ export default function UnitsSettings() {
           )}
           {units?.map(u => (
             <div key={u.id} className="flex items-center justify-between py-1.5">
-              <span className="text-sm font-medium">{u.name}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{u.name}</span>
+                {u.category && (
+                  <Badge variant="secondary" className="text-[10px] font-normal h-5">{u.category}</Badge>
+                )}
+              </div>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openUnitEdit(u)}><Edit2 className="w-3 h-3" /></Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => requestDeleteUnit(u)}><Trash2 className="w-3 h-3" /></Button>
@@ -136,6 +147,20 @@ export default function UnitsSettings() {
                   {t('units.dialog.renameHint', { old: unitOriginalName, new: trimmedUnitName })}
                 </p>
               )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Kategori Satuan</Label>
+              <Select value={unitCategory} onValueChange={(v: "BERAT" | "KEMASAN" | "VOLUME" | "LAINNYA") => setUnitCategory(v)}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Pilih Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BERAT">Berat (kg, gram, mg)</SelectItem>
+                  <SelectItem value="KEMASAN">Kemasan (pcs, botol, pack)</SelectItem>
+                  <SelectItem value="VOLUME">Volume (liter, ml)</SelectItem>
+                  <SelectItem value="LAINNYA">Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Button className="w-full h-11" onClick={saveUnit} disabled={!unitName.trim()}>{t('units.dialog.save')}</Button>
           </div>

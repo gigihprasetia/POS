@@ -224,6 +224,7 @@ export interface Unit {
   deletedAt: Date | null;
   updatedAt?: Date;
   syncedAt?: Date | null;
+  category?: "BERAT" | "KEMASAN" | "VOLUME" | "LAINNYA"; // optional for backward compatibility
 }
 
 export interface ExpenseCategory {
@@ -872,36 +873,65 @@ class PosDatabase extends Dexie {
         await backfillTable("stockOpnames", ["date"]);
       });
 
-    // Version 15 - Add minStockAlert table
-    this.version(15).stores({
-      categories: "++id, name, isDeleted, updatedAt, syncedAt",
-      products:
-        "++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt",
-      suppliers: "++id, name, isDeleted, updatedAt, syncedAt",
-      customers: "++id, name, isDeleted, updatedAt, syncedAt",
-      stockIns:
-        "++id, productId, supplierId, date, createdBy, updatedAt, syncedAt",
-      stockOuts: "++id, productId, date, createdBy, updatedAt, syncedAt",
-      hppHistory: "++id, productId, date, syncedAt",
-      paymentMethods: "++id, name, category, updatedAt, syncedAt",
-      transactions:
-        "++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt",
-      transactionItems: "++id, transactionId, productId",
-      storeSettings: "++id",
-      units: "++id, &name, isDeleted, updatedAt, syncedAt",
-      users: "++id, &username, role, isActive, updatedAt, syncedAt",
-      expenseCategories: "++id, name, isDeleted, updatedAt, syncedAt",
-      expenses:
-        "++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt",
-      debts:
-        "++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt",
-      debtPayments:
-        "++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt",
-      stockOpnames: "++id, date, status, createdBy, updatedAt, syncedAt",
-      stockOpnameItems: "++id, opnameId, productId, [opnameId+productId]",
-      deletedRecords: "++id, tableName, recordId, deletedAt, syncedAt",
-      minStockAlert: "++id",
-    });
+    // Version 15 - Add minStockAlert table and unit category
+    this.version(15)
+      .stores({
+        categories: "++id, name, isDeleted, updatedAt, syncedAt",
+        products:
+          "++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt",
+        suppliers: "++id, name, isDeleted, updatedAt, syncedAt",
+        customers: "++id, name, isDeleted, updatedAt, syncedAt",
+        stockIns:
+          "++id, productId, supplierId, date, createdBy, updatedAt, syncedAt",
+        stockOuts: "++id, productId, date, createdBy, updatedAt, syncedAt",
+        hppHistory: "++id, productId, date, syncedAt",
+        paymentMethods: "++id, name, category, updatedAt, syncedAt",
+        transactions:
+          "++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt",
+        transactionItems: "++id, transactionId, productId",
+        storeSettings: "++id",
+        units: "++id, &name, isDeleted, updatedAt, syncedAt",
+        users: "++id, &username, role, isActive, updatedAt, syncedAt",
+        expenseCategories: "++id, name, isDeleted, updatedAt, syncedAt",
+        expenses:
+          "++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt",
+        debts:
+          "++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt",
+        debtPayments:
+          "++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt",
+        stockOpnames: "++id, date, status, createdBy, updatedAt, syncedAt",
+        stockOpnameItems: "++id, opnameId, productId, [opnameId+productId]",
+        deletedRecords: "++id, tableName, recordId, deletedAt, syncedAt",
+        minStockAlert: "++id",
+      })
+      .upgrade(async (tx) => {
+        // Default to "LAINNYA" or backfill based on unit name if category is missing
+        const unitsTable = tx.table("units");
+        await unitsTable.toCollection().modify((u: any) => {
+          if (!u.category) {
+            const name = (u.name || "").toLowerCase();
+            if (["kg", "gram", "mg"].includes(name)) {
+              u.category = "BERAT";
+            } else if (["liter", "ml", "galon"].includes(name)) {
+              u.category = "VOLUME";
+            } else if (
+              [
+                "pcs",
+                "botol",
+                "bungkus",
+                "cup",
+                "kardus",
+                "box",
+                "pack",
+              ].includes(name)
+            ) {
+              u.category = "KEMASAN";
+            } else {
+              u.category = "LAINNYA";
+            }
+          }
+        });
+      });
   }
 }
 
@@ -1175,6 +1205,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "KEMASAN",
       },
       {
         name: "kg",
@@ -1182,6 +1213,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "BERAT",
       },
       {
         name: "gram",
@@ -1189,6 +1221,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "BERAT",
       },
       {
         name: "liter",
@@ -1196,6 +1229,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "VOLUME",
       },
       {
         name: "ml",
@@ -1203,6 +1237,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "VOLUME",
       },
       {
         name: "porsi",
@@ -1210,6 +1245,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "LAINNYA",
       },
       {
         name: "cup",
@@ -1217,6 +1253,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "KEMASAN",
       },
       {
         name: "botol",
@@ -1224,6 +1261,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "KEMASAN",
       },
       {
         name: "bungkus",
@@ -1231,6 +1269,7 @@ export async function seedDefaultData() {
         createdAt: now,
         isDeleted: 0,
         deletedAt: null,
+        category: "KEMASAN",
       },
     ]);
   }
