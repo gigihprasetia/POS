@@ -115,6 +115,7 @@ export default function Kasir() {
 
   const products = useLiveQuery(() => db.products.where('isDeleted').equals(0).toArray());
   const categories = useLiveQuery(() => db.categories.where('isDeleted').equals(0).toArray());
+  const units = useLiveQuery(() => db.units.where('isDeleted').equals(0).toArray());
   const paymentMethods = useLiveQuery(() => db.paymentMethods.toArray());
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const openBills = useLiveQuery(() => db.transactions.where('status').equals('open').reverse().sortBy('date'));
@@ -126,6 +127,9 @@ export default function Kasir() {
   const allowed = can('create_transaction');
 
   const cartProductIds = new Set(cart.map(c => c.product.id));
+
+  const unitCategoryMap = new Map(units?.map(u => [u.name.toLowerCase(), u.category]) || []);
+  const isWeightProduct = (p: Product) => unitCategoryMap.get(p.unit?.toLowerCase() || '') === 'BERAT';
 
   const filtered = products?.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -159,7 +163,7 @@ export default function Kasir() {
           toast.error(t('cashier.toast.stockLow'));
           return prev;
         }
-        return prev.map(c => c.product.id === product.id ? { ...c, qty: c.qty + 1 } : c);
+        return prev.map(c => c.product.id === product.id ? { ...c, qty: Number((c.qty + 1).toFixed(3)) } : c);
       }
       return [...prev, { product, qty: 1, discountType: null, discountValue: 0 }];
     });
@@ -168,7 +172,7 @@ export default function Kasir() {
   const updateQty = (productId: number, delta: number) => {
     setCart(prev => prev.map(c => {
       if (c.product.id !== productId) return c;
-      const newQty = c.qty + delta;
+      const newQty = Number((c.qty + delta).toFixed(3));
       if (newQty <= 0) return c;
       if (isStockManaged(c.product) && newQty > c.product.stock) { toast.error(t('cashier.toast.stockLow')); return c; }
       return { ...c, qty: newQty };
@@ -859,22 +863,24 @@ export default function Kasir() {
                           type="number"
                           inputMode="numeric"
                           defaultValue={item.qty}
+                          step={isWeightProduct(item.product) ? "any" : "1"}
                           onBlur={e => {
-                            const val = parseInt(e.target.value);
-                            if (!isNaN(val) && val >= 1) {
-                              if (isStockManaged(item.product) && val > item.product.stock) {
+                            const val = isWeightProduct(item.product) ? parseFloat(e.target.value) : parseInt(e.target.value);
+                            if (!isNaN(val) && val > 0) {
+                              const finalVal = isWeightProduct(item.product) ? Number(val.toFixed(3)) : val;
+                              if (isStockManaged(item.product) && finalVal > item.product.stock) {
                                 toast.error(t('cashier.toast.stockLowWithMax', { max: item.product.stock }));
                                 e.target.value = String(item.product.stock);
                                 setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: item.product.stock } : c));
                               } else {
-                                setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: val } : c));
+                                setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: finalVal } : c));
                               }
                             } else {
                               e.target.value = String(item.qty);
                             }
                           }}
                           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                          className="w-10 h-8 text-center text-sm font-bold bg-transparent border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-12 h-8 text-center text-sm font-bold bg-transparent border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                         <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => updateQty(item.product.id!, 1)}>
                           <Plus className="w-3 h-3" />
@@ -1073,22 +1079,24 @@ export default function Kasir() {
                           type="number"
                           inputMode="numeric"
                           defaultValue={item.qty}
+                          step={isWeightProduct(item.product) ? "any" : "1"}
                           onBlur={e => {
-                            const val = parseInt(e.target.value);
-                            if (!isNaN(val) && val >= 1) {
-                              if (isStockManaged(item.product) && val > item.product.stock) {
+                            const val = isWeightProduct(item.product) ? parseFloat(e.target.value) : parseInt(e.target.value);
+                            if (!isNaN(val) && val > 0) {
+                              const finalVal = isWeightProduct(item.product) ? Number(val.toFixed(3)) : val;
+                              if (isStockManaged(item.product) && finalVal > item.product.stock) {
                                 toast.error(t('cashier.toast.stockLowWithMax', { max: item.product.stock }));
                                 e.target.value = String(item.product.stock);
                                 setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: item.product.stock } : c));
                               } else {
-                                setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: val } : c));
+                                setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: finalVal } : c));
                               }
                             } else {
                               e.target.value = String(item.qty);
                             }
                           }}
                           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                          className="w-10 h-8 text-center text-sm font-bold bg-transparent border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-12 h-8 text-center text-sm font-bold bg-transparent border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                         <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => updateQty(item.product.id!, 1)}>
                           <Plus className="w-3 h-3" />
