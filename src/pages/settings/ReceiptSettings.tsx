@@ -21,7 +21,7 @@ export default function ReceiptSettings() {
   const { isLoggedIn: cloudLoggedIn, isSyncSubscribed: cloudSubscribed } = useCloudAuth();
   const [footerText, setFooterText] = useState('');
   const [printLogo, setPrintLogo] = useState(false);
-  const [hideWatermark, setHideWatermark] = useState(false);
+  // const [hideWatermark, setHideWatermark] = useState(true);
 
   const isCloudActive = cloudLoggedIn && cloudSubscribed && !!storeSettings?.cloudStoreId;
 
@@ -30,7 +30,7 @@ export default function ReceiptSettings() {
     if (storeSettings) {
       setFooterText(storeSettings.receiptFooter ?? '');
       setPrintLogo(storeSettings.printLogo ?? false);
-      setHideWatermark(storeSettings.hideWatermark ?? false);
+      // setHideWatermark(storeSettings.hideWatermark ?? false);
     }
   }, [storeSettings]);
 
@@ -44,7 +44,7 @@ export default function ReceiptSettings() {
       await db.storeSettings.update(storeSettings.id, {
         receiptFooter: footerText.trim(),
         printLogo,
-        hideWatermark: hideWatermark && isCloudActive,
+        hideWatermark: true,
       });
       toast.success(t('receiptSettings.saveSuccess'));
     } catch {
@@ -88,17 +88,17 @@ export default function ReceiptSettings() {
           </div>
 
           {/* Watermark Toggle */}
-          <div className="flex items-start justify-between gap-4 pb-4 border-b border-border/50">
+          {/* <div className="flex items-start justify-between gap-4 pb-4 border-b border-border/50">
             <div className="space-y-0.5">
-              <Label 
-                htmlFor="hide-watermark-switch" 
+              <Label
+                htmlFor="hide-watermark-switch"
                 className={`text-sm font-semibold cursor-pointer ${!isCloudActive ? 'opacity-70' : ''}`}
               >
                 {t('receiptSettings.hideWatermarkLabel')}
               </Label>
               <p className="text-[10px] text-muted-foreground leading-normal">
-                {isCloudActive 
-                  ? t('receiptSettings.hideWatermarkDescActive') 
+                {isCloudActive
+                  ? t('receiptSettings.hideWatermarkDescActive')
                   : t('receiptSettings.hideWatermarkDescRequired')}
               </p>
             </div>
@@ -108,7 +108,7 @@ export default function ReceiptSettings() {
               disabled={!isCloudActive}
               onCheckedChange={setHideWatermark}
             />
-          </div>
+          </div> */}
 
           {/* Footer Input */}
           <div className="space-y-1.5">
@@ -121,7 +121,7 @@ export default function ReceiptSettings() {
               onChange={(e) => setFooterText(e.target.value)}
               placeholder={t('receipt.footerFallback')}
               className="h-11"
-              maxLength={80}
+            // maxLength={80}
             />
             <p className="text-[10px] text-muted-foreground">
               {t('masterData.receiptFooter.description')}
@@ -142,7 +142,7 @@ export default function ReceiptSettings() {
         </span>
         <Card className="border border-dashed border-border/80 bg-white dark:bg-zinc-900 shadow-inner rounded-xl overflow-hidden">
           <CardContent className="p-6 font-mono text-[11px] text-zinc-700 dark:text-zinc-300 space-y-4">
-            
+
             {/* Logo Preview */}
             {printLogo && storeSettings?.logo && (
               <div className="flex justify-center mb-2">
@@ -159,9 +159,9 @@ export default function ReceiptSettings() {
               <p>Tangerang</p>
               <p>081208120812</p>
             </div>
-            
+
             <div className="border-t border-dashed border-zinc-300 dark:border-zinc-700" />
-            
+
             <div className="space-y-1.5 opacity-55">
               <div className="flex justify-between">
                 <span>Nasi Goreng Spesial</span>
@@ -174,19 +174,19 @@ export default function ReceiptSettings() {
             </div>
 
             <div className="border-t border-dashed border-zinc-300 dark:border-zinc-700" />
-            
+
             {/* Real-time footer preview */}
             <div className="text-center py-2 text-zinc-900 dark:text-zinc-100 font-semibold break-words transition-all px-4 pb-1">
               {footerText.trim() || t('receipt.footerFallback')}
             </div>
 
             {/* Watermark preview */}
-            {!(hideWatermark && isCloudActive) && (
+            {/* {!(hideWatermark && isCloudActive) && (
               <div className="text-center text-[10px] text-zinc-500 pt-2 border-t border-dotted border-zinc-200 dark:border-zinc-800 space-y-0.5">
                 <p>Dicetak Dari Aplikasi</p>
                 <p className="font-semibold">FreeKasir.com</p>
               </div>
-            )}
+            )} */}
           </CardContent>
         </Card>
       </div>

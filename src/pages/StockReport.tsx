@@ -29,6 +29,9 @@ export default function StockReport() {
   const stockIns = useLiveQuery(async () => db.stockIns.where('date').aboveOrEqual(since).toArray(), [days]);
   const stockOuts = useLiveQuery(async () => db.stockOuts.where('date').aboveOrEqual(since).toArray(), [days]);
 
+  const minStockConfig = useLiveQuery(() => db.minStockAlert.toCollection().first());
+  const MIN_STOCK = minStockConfig?.stockNumber ?? 5;
+
   if (!can('view_reports')) {
     return <LockedPage title={t('stockReport.locked.title')} permissionLabel={t('stockReport.locked.permissionLabel')} />;
   }
@@ -43,8 +46,10 @@ export default function StockReport() {
   }, {} as Record<string, number>) ?? {};
 
   const currentStock = products?.reduce((s, p) => s + p.stock, 0) ?? 0;
-  const lowStockProducts = products?.filter(p => p.stock > 0 && p.stock <= 5) ?? [];
-  const outOfStockProducts = products?.filter(p => p.stock === 0) ?? [];
+  // Make sure to check p.trackStock !== false so unmanaged products don't show up here
+
+  const lowStockProducts = products?.filter(p => p.trackStock !== false && p.stock > 0 && p.stock <= MIN_STOCK) ?? [];
+  const outOfStockProducts = products?.filter(p => p.trackStock !== false && p.stock === 0) ?? [];
 
   const getProductName = (pid: number) => products?.find(p => p.id === pid)?.name ?? '-';
 
@@ -180,8 +185,8 @@ export default function StockReport() {
             <BarChart data={chartData}>
               <XAxis dataKey="date" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis hide />
-              <Tooltip 
-                formatter={(v: number, name: string) => [v, name === 'stockIn' ? stockInLabel : stockOutLabel]} 
+              <Tooltip
+                formatter={(v: number, name: string) => [v, name === 'stockIn' ? stockInLabel : stockOutLabel]}
                 contentStyle={{ fontSize: 12, borderRadius: 8 }}
                 labelStyle={{ fontSize: 10 }}
               />
@@ -214,7 +219,7 @@ export default function StockReport() {
 
       {/* Low Stock Alert */}
       {lowStockProducts.length > 0 && (
-        <Card className="border-0 shadow-sm border-warning/50">
+        <Card className="border-0 shadow-sm border-warning/50 ">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-1.5 text-warning">
               <AlertTriangle className="w-4 h-4" />
@@ -222,15 +227,15 @@ export default function StockReport() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {lowStockProducts.slice(0, 5).map(p => (
+            {lowStockProducts.slice(0, MIN_STOCK).map(p => (
               <div key={p.id} className="flex items-center justify-between">
                 <span className="text-sm truncate flex-1">{p.name}</span>
                 <span className="text-sm font-bold text-warning">{p.stock} {p.unit}</span>
               </div>
             ))}
-            {lowStockProducts.length > 5 && (
+            {lowStockProducts.length > MIN_STOCK && (
               <p className="text-xs text-muted-foreground text-center">
-                {t('stockReport.lowStock.more', { count: lowStockProducts.length - 5 })}
+                {t('stockReport.lowStock.more', { count: lowStockProducts.length - MIN_STOCK })}
               </p>
             )}
           </CardContent>
@@ -247,15 +252,15 @@ export default function StockReport() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {outOfStockProducts.slice(0, 5).map(p => (
+            {outOfStockProducts.slice(0, MIN_STOCK).map(p => (
               <div key={p.id} className="flex items-center justify-between">
                 <span className="text-sm truncate flex-1">{p.name}</span>
                 <span className="text-xs text-destructive">0 {p.unit}</span>
               </div>
             ))}
-            {outOfStockProducts.length > 5 && (
+            {outOfStockProducts.length > MIN_STOCK && (
               <p className="text-xs text-muted-foreground text-center">
-                {t('stockReport.lowStock.more', { count: outOfStockProducts.length - 5 })}
+                {t('stockReport.lowStock.more', { count: outOfStockProducts.length - MIN_STOCK })}
               </p>
             )}
           </CardContent>

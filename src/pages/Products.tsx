@@ -50,6 +50,7 @@ export default function Produk() {
 
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('newest'); // 'newest', 'stock-asc', 'stock-desc', 'price-asc', 'price-desc'
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -98,6 +99,17 @@ export default function Produk() {
     const matchCategory = filterCategory === 'all' || p.categoryId === Number(filterCategory);
     return matchSearch && matchCategory;
   }) ?? [];
+
+  filtered.sort((a, b) => {
+    switch (sortBy) {
+      case 'stock-asc': return a.stock - b.stock;
+      case 'stock-desc': return b.stock - a.stock;
+      case 'price-asc': return a.price - b.price;
+      case 'price-desc': return b.price - a.price;
+      case 'newest':
+      default: return b.id! - a.id!; // Newest first
+    }
+  });
 
   const getCategoryName = (catId: number) => categories?.find(c => c.id === catId)?.name ?? '-';
   const getCategoryColor = (catId: number) => categories?.find(c => c.id === catId)?.color ?? '#999';
@@ -524,7 +536,7 @@ export default function Produk() {
     try {
       const now = new Date();
       const activeCats = categories || [];
-      
+
       const newProducts: Product[] = validRows.map(r => {
         const matchedCat = activeCats.find(c => c.name.toLowerCase().trim() === r.categoryName.toLowerCase().trim());
         const categoryId = matchedCat?.id || 0;
@@ -586,7 +598,7 @@ export default function Produk() {
       </div>
 
       {/* Search & Filter */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -596,17 +608,31 @@ export default function Produk() {
             className="pl-9 h-10"
           />
         </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-[120px] h-10">
-            <SelectValue placeholder={t('filterCategory')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('filterAll')}</SelectItem>
-            {categories?.map(c => (
-              <SelectItem key={c.id} value={c.id!.toString()}>{c.icon} {c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 shrink-0">
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-[130px] h-10">
+              <SelectValue placeholder={t('filterCategory')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filterAll')}</SelectItem>
+              {categories?.map(c => (
+                <SelectItem key={c.id} value={c.id!.toString()}>{c.icon} {c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[150px] h-10">
+              <SelectValue placeholder="Urutkan" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Terbaru</SelectItem>
+              <SelectItem value="stock-asc">Stok Terkecil</SelectItem>
+              <SelectItem value="stock-desc">Stok Terbesar</SelectItem>
+              <SelectItem value="price-asc">Harga Termurah</SelectItem>
+              <SelectItem value="price-desc">Harga Termahal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Product count */}

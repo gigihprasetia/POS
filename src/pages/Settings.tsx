@@ -275,35 +275,35 @@ export default function Pengaturan() {
   const cloudStoreLinked = !!storeSettings?.cloudStoreId;
   const cloudStatus = !(cloudLoggedIn && cloudSubscribed)
     ? {
-        theme: 'bg-destructive/10 ring-destructive/20',
-        iconWrap: 'bg-destructive/15 text-destructive',
-        badge: 'bg-destructive text-white',
-        badgeText: t('cloudSync.status.inactive'),
-        desc: t('cloudSync.desc.inactive'),
-      }
+      theme: 'bg-destructive/10 ring-destructive/20',
+      iconWrap: 'bg-destructive/15 text-destructive',
+      badge: 'bg-destructive text-white',
+      badgeText: t('cloudSync.status.inactive'),
+      desc: t('cloudSync.desc.inactive'),
+    }
     : !cloudStoreLinked
-    ? {
+      ? {
         theme: 'bg-warning/10 ring-warning/20',
         iconWrap: 'bg-warning/15 text-warning',
         badge: 'bg-warning text-white',
         badgeText: t('cloudSync.status.selectStore'),
         desc: t('cloudSync.desc.selectStore'),
       }
-    : !cloudAutoOn
-    ? {
-        theme: 'bg-warning/10 ring-warning/20',
-        iconWrap: 'bg-warning/15 text-warning',
-        badge: 'bg-warning text-white',
-        badgeText: t('cloudSync.status.needsSetup'),
-        desc: t('cloudSync.desc.needsSetup'),
-      }
-    : {
-        theme: 'bg-success/10 ring-success/20',
-        iconWrap: 'bg-success/15 text-success',
-        badge: 'bg-success text-white',
-        badgeText: t('cloudSync.status.active'),
-        desc: t('cloudSync.desc.active'),
-      };
+      : !cloudAutoOn
+        ? {
+          theme: 'bg-warning/10 ring-warning/20',
+          iconWrap: 'bg-warning/15 text-warning',
+          badge: 'bg-warning text-white',
+          badgeText: t('cloudSync.status.needsSetup'),
+          desc: t('cloudSync.desc.needsSetup'),
+        }
+        : {
+          theme: 'bg-success/10 ring-success/20',
+          iconWrap: 'bg-success/15 text-success',
+          badge: 'bg-success text-white',
+          badgeText: t('cloudSync.status.active'),
+          desc: t('cloudSync.desc.active'),
+        };
 
   return (
     <div className="px-4 pt-6 pb-4 space-y-5">
@@ -606,6 +606,15 @@ export default function Pengaturan() {
             </Card>
           </Link>
         )}
+        <Link to="/setting-stock">
+          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Package className="w-4 h-4" /></div>
+              <div className="flex-1"><p className="text-sm font-semibold">Setting Minimal Stock</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.transactionHistory.description')}</p></div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Master Data & Preferensi */}
@@ -775,59 +784,59 @@ export default function Pengaturan() {
 
       {/* Bluetooth Printer (APK only) */}
       {isNative && can('manage_store_settings') && (
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-1.5"><Printer className="w-4 h-4" /> {t('bluetoothPrinter.title')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="rounded-lg bg-muted/60 p-3">
-            <p className="text-[11px] text-muted-foreground mb-1">{t('bluetoothPrinter.default')}</p>
-            {defaultPrinter ? (
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{defaultPrinter.name}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{defaultPrinter.address}</p>
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-1.5"><Printer className="w-4 h-4" /> {t('bluetoothPrinter.title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="rounded-lg bg-muted/60 p-3">
+              <p className="text-[11px] text-muted-foreground mb-1">{t('bluetoothPrinter.default')}</p>
+              {defaultPrinter ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{defaultPrinter.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{defaultPrinter.address}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={clearDefaultPrinter}>
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={clearDefaultPrinter}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t('bluetoothPrinter.notSelected')}</p>
-            )}
-          </div>
-
-          <Button variant="outline" className="w-full h-10 text-sm gap-2" onClick={refreshPairedPrinters} disabled={loadingPrinters}>
-            <Printer className="w-4 h-4" /> {loadingPrinters ? t('bluetoothPrinter.searching') : t('bluetoothPrinter.search')}
-          </Button>
-
-          {pairedPrinters.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-[11px] text-muted-foreground">{t('bluetoothPrinter.selectPrinter')}</p>
-              {pairedPrinters.map(printer => {
-                const isSelected = defaultPrinter?.address === printer.address;
-                return (
-                  <button
-                    key={printer.address}
-                    type="button"
-                    onClick={() => selectDefaultPrinter(printer)}
-                    className={`flex items-center justify-between w-full text-left rounded-lg border px-3 py-2 transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{printer.name || t('bluetoothPrinter.unnamed')}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{printer.address}</p>
-                    </div>
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />}
-                  </button>
-                );
-              })}
+              ) : (
+                <p className="text-sm text-muted-foreground">{t('bluetoothPrinter.notSelected')}</p>
+              )}
             </div>
-          )}
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            {t('bluetoothPrinter.hint')}
-          </p>
-        </CardContent>
-      </Card>
+
+            <Button variant="outline" className="w-full h-10 text-sm gap-2" onClick={refreshPairedPrinters} disabled={loadingPrinters}>
+              <Printer className="w-4 h-4" /> {loadingPrinters ? t('bluetoothPrinter.searching') : t('bluetoothPrinter.search')}
+            </Button>
+
+            {pairedPrinters.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[11px] text-muted-foreground">{t('bluetoothPrinter.selectPrinter')}</p>
+                {pairedPrinters.map(printer => {
+                  const isSelected = defaultPrinter?.address === printer.address;
+                  return (
+                    <button
+                      key={printer.address}
+                      type="button"
+                      onClick={() => selectDefaultPrinter(printer)}
+                      className={`flex items-center justify-between w-full text-left rounded-lg border px-3 py-2 transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{printer.name || t('bluetoothPrinter.unnamed')}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{printer.address}</p>
+                      </div>
+                      {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-[10px] text-muted-foreground leading-snug">
+              {t('bluetoothPrinter.hint')}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Privasi & Analitik */}
@@ -861,67 +870,67 @@ export default function Pengaturan() {
       {/* About */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4 text-center space-y-2">
-           <p className="text-sm font-bold">{t('about.appName')}</p>
-           <p className="text-xs text-muted-foreground">{t('about.tagline')}</p>
-           <p className="text-[10px] text-muted-foreground">{t('about.version', { version: APP_VERSION })}</p>
+          <p className="text-sm font-bold">{t('about.appName')}</p>
+          <p className="text-xs text-muted-foreground">{t('about.tagline')}</p>
+          <p className="text-[10px] text-muted-foreground">{t('about.version', { version: APP_VERSION })}</p>
 
-           {/* Links */}
-           <div className="flex flex-col gap-2 pt-2">
-             <button
-               type="button"
-               onClick={() => setWhatsNewOpen(true)}
-               className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-primary/30 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
-             >
-               <Sparkles className="w-3.5 h-3.5" />
-               {t('about.whatsNew')}
-               {unseenFeatures.length > 0 && (
-                 <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                   {unseenFeatures.length}
-                 </span>
-               )}
-             </button>
-             <a
-               href="https://kasirgratisan.fider.io"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-border bg-muted/50 text-xs font-semibold text-foreground hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-colors"
-             >
-               {t('about.requestFeature')}
-             </a>
-             <a
-               href="https://traktir.jipraks.com"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-warning/30 bg-warning/5 text-xs font-semibold text-warning hover:bg-warning/10 transition-colors"
-             >
-               {t('about.donate')}
-             </a>
-             <a
-               href="https://t.me/kasirgratisan"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-sky-500/30 bg-sky-500/5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
-             >
-               {t('about.telegram')}
-             </a>
-           </div>
-           {storageUsage && (
-             <div className="pt-2 border-t">
-               <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-1.5">
-                 <HardDrive className="w-3.5 h-3.5" />
-                 <span>{t('about.storageUsed')}</span>
-               </div>
-               <p className="text-xs font-semibold">
-                 {formatBytes(storageUsage.usage)} / {formatBytes(storageUsage.quota)}
-               </p>
-               <div className="w-full h-1.5 bg-muted rounded-full mt-1.5 overflow-hidden">
-                 <div
-                   className="h-full bg-primary rounded-full transition-all"
-                   style={{ width: `${Math.min(100, (storageUsage.usage / storageUsage.quota) * 100)}%` }}
-                 />
-               </div>
-             </div>
-           )}
+          {/* Links */}
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setWhatsNewOpen(true)}
+              className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-primary/30 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {t('about.whatsNew')}
+              {unseenFeatures.length > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                  {unseenFeatures.length}
+                </span>
+              )}
+            </button>
+            <a
+              href="https://kasirgratisan.fider.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-border bg-muted/50 text-xs font-semibold text-foreground hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-colors"
+            >
+              {t('about.requestFeature')}
+            </a>
+            <a
+              href="https://traktir.jipraks.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-warning/30 bg-warning/5 text-xs font-semibold text-warning hover:bg-warning/10 transition-colors"
+            >
+              {t('about.donate')}
+            </a>
+            <a
+              href="https://t.me/kasirgratisan"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-sky-500/30 bg-sky-500/5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
+            >
+              {t('about.telegram')}
+            </a>
+          </div>
+          {storageUsage && (
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-1.5">
+                <HardDrive className="w-3.5 h-3.5" />
+                <span>{t('about.storageUsed')}</span>
+              </div>
+              <p className="text-xs font-semibold">
+                {formatBytes(storageUsage.usage)} / {formatBytes(storageUsage.quota)}
+              </p>
+              <div className="w-full h-1.5 bg-muted rounded-full mt-1.5 overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (storageUsage.usage / storageUsage.quota) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

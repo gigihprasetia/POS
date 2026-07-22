@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Package, BarChart3, TrendingUp, AlertTriangle, Receipt, ChevronRight, ClipboardList, Wallet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, Locale } from 'date-fns';
 import { id, enUS, ms } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import BackupReminder, { shouldShowBackupReminder, exportBackupData } from '@/components/BackupReminder';
@@ -61,7 +61,10 @@ export default function Dashboard() {
     return open.length;
   }, []);
 
-  const lowStockProducts = useLiveQuery(() => db.products.filter(p => p.isDeleted === 0 && isStockManaged(p) && p.stock <= 5).toArray());
+  const minStockConfig = useLiveQuery(() => db.minStockAlert.toCollection().first());
+  const MIN_STOCK = minStockConfig?.stockNumber ?? 5;
+
+  const lowStockProducts = useLiveQuery(() => db.products.filter(p => p.isDeleted === 0 && isStockManaged(p) && p.stock <= MIN_STOCK).toArray(), [MIN_STOCK]);
 
   const todayExpenses = useLiveQuery(async () => {
     const all = await db.expenses.where('date').aboveOrEqual(today).toArray();

@@ -169,9 +169,9 @@ export default function BarcodeScanner({ open, onClose, onScan }: BarcodeScanner
             { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.5 },
             decodedText => {
               onScan(decodedText);
-              void handleStop();
+              // removed handleStop() so scanner keeps running for continuous scanning
             },
-            () => {},
+            () => { },
           );
         };
 

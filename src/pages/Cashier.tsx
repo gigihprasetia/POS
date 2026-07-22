@@ -620,8 +620,13 @@ export default function Kasir() {
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
   const openBillsCount = openBills?.length ?? 0;
 
+  const lastScanRef = useRef<{ code: string; time: number }>({ code: '', time: 0 });
   const handleScan = (barcode: string) => {
-    setScannerOpen(false);
+    // Debounce: ignore same barcode within 1.5s to prevent duplicate scans
+    const now = Date.now();
+    if (lastScanRef.current.code === barcode && now - lastScanRef.current.time < 1500) return;
+    lastScanRef.current = { code: barcode, time: now };
+
     const product = products?.find(p => p.sku === barcode || p.barcode === barcode);
     if (product) {
       if (isStockManaged(product) && product.stock <= 0) {
@@ -679,346 +684,346 @@ export default function Kasir() {
       <div className="flex flex-col md:flex-row gap-0 md:gap-4 h-full">
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {/* Header */}
-      <div className="flex items-center justify-between mb-4 pt-1">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5 text-primary" />
-          {t('cashier.title')}
-          {editingTxId && (
-            <Badge variant="secondary" className="text-[10px] font-normal">
-              {t('cashier.editingBill')}
-            </Badge>
-          )}
-        </h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 gap-1.5 text-xs relative"
-          onClick={() => setOpenBillsOpen(true)}
-        >
-          <ClipboardList className="w-4 h-4" />
-          {t('cashier.openBill')}{openBillsCount > 0 && ` (${openBillsCount})`}
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="flex gap-2 mb-3 px-1">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder={t('cashier.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-10" />
-        </div>
-        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setScannerOpen(true)}>
-          <ScanBarcode className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* SKU / Barcode scan input */}
-      <div className="flex gap-2 mb-3 px-1">
-        <div className="relative flex-1">
-          <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            ref={scanInputRef}
-            placeholder={t('cashier.scanPlaceholder')}
-            value={scanInput}
-            onChange={e => setScanInput(e.target.value)}
-            onKeyDown={handleScanKeyDown}
-            className="pl-9 h-10 text-sm"
-          />
-        </div>
-      </div>
-
-      {/* Category chips */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-3 pb-1 pr-4" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
-        <button onClick={() => setFilterCategory('all')} className={cn('shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors', filterCategory === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
-          {t('cashier.categoryAll')}
-        </button>
-        {categories?.map(c => (
-          <button key={c.id} onClick={() => setFilterCategory(c.id!.toString())} className={cn('shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors', filterCategory === c.id!.toString() ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
-            {c.icon} {c.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Product Grid */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {filtered.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-sm text-muted-foreground">
-              {products && products.length > 0
-                ? t('cashier.empty.outOfStock')
-                : t('cashier.empty.noProducts')}
-            </p>
+          <div className="flex items-center justify-between mb-4 pt-1">
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-primary" />
+              {t('cashier.title')}
+              {editingTxId && (
+                <Badge variant="secondary" className="text-[10px] font-normal">
+                  {t('cashier.editingBill')}
+                </Badge>
+              )}
+            </h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 gap-1.5 text-xs relative"
+              onClick={() => setOpenBillsOpen(true)}
+            >
+              <ClipboardList className="w-4 h-4" />
+              {t('cashier.openBill')}{openBillsCount > 0 && ` (${openBillsCount})`}
+            </Button>
           </div>
-        ) : layoutMode === 'rows' ? (
-          <div className="space-y-1.5 px-0.5 pb-2">
-            {filtered.map(p => (
-              <Card key={p.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]" onClick={() => addToCart(p)}>
-                <CardContent className="p-2 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                    {p.photo ? (
-                      <img src={p.photo} alt={p.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <PackageIcon className="w-5 h-5 text-muted-foreground/30" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start gap-2">
-                      <h3 className="text-xs font-semibold truncate">{p.name}</h3>
-                      <p className="text-xs font-bold text-primary shrink-0">{rp(p.price)}</p>
-                    </div>
-                    {p.description && (
-                      <p className="text-[10px] text-muted-foreground truncate" title={p.description}>
-                        {p.description}
-                      </p>
-                    )}
-                    <div className="flex justify-between items-center mt-1">
-                      {isStockManaged(p) ? (
-                        <p className="text-[10px] text-muted-foreground">{t('cashier.productCard.stock', { stock: p.stock, unit: p.unit })}</p>
-                      ) : (
-                        <p className="text-[10px] text-primary">{t('cashier.productCard.alwaysAvailable')}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {filtered.map(p => (
-              <Card key={p.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]" onClick={() => addToCart(p)}>
-                <CardContent className="p-0">
-                  <div className="w-full aspect-square bg-muted rounded-t-lg overflow-hidden flex items-center justify-center">
-                    {p.photo ? (
-                      <img src={p.photo} alt={p.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <PackageIcon className="w-8 h-8 text-muted-foreground/30" />
-                    )}
-                  </div>
-                  <div className="p-2.5">
-                    <h3 className="text-xs font-semibold truncate">{p.name}</h3>
-                    <p className="text-sm font-bold text-primary mt-0.5">{rp(p.price)}</p>
-                    {p.description && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={p.description}>
-                        {p.description}
-                      </p>
-                    )}
-                    {isStockManaged(p) ? (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{t('cashier.productCard.stock', { stock: p.stock, unit: p.unit })}</p>
-                    ) : (
-                      <p className="text-[10px] text-primary mt-0.5">{t('cashier.productCard.alwaysAvailable')}</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-        </div>
-      </div>
 
-      {/* Desktop Cart Panel */}
-      <div className="hidden md:flex md:w-80 lg:w-96 flex-col overflow-hidden bg-card rounded-xl border border-border shrink-0">
-        <div className="p-4 border-b border-border shrink-0">
-          <h3 className="text-base font-bold flex items-center gap-2">
-            <ShoppingCart className="w-4 h-4 text-primary" />
-            {t('cashier.cart.title', { count: cartCount })}
-            {editingTxId && <span className="text-xs font-normal text-muted-foreground">{t('cashier.cart.editLabel')}</span>}
-          </h3>
-        </div>
-        {cart.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center p-8">
-            <p className="text-sm text-muted-foreground">{t('cashier.cart.empty')}</p>
-          </div>
-        ) : (
-          <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto space-y-3 p-4">
-              {cart.map(item => (
-                <div key={item.product.id} className="bg-muted/50 p-3 rounded-xl space-y-1.5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{item.product.name}</p>
-                      <p className="text-xs text-muted-foreground">{rp(item.product.price)} × {item.qty}</p>
-                      {item.discountType && getItemDiscountAmount(item) > 0 && (
-                        <p className="text-[10px] text-destructive">
-                          {t('cashier.cartDiscount.label')}: {item.discountType === 'percentage' ? `${item.discountValue}%` : rp(item.discountValue)} (-{rp(getItemDiscountAmount(item))})
-                        </p>
-                      )}
-                      <p className="text-sm font-bold text-primary">{rp(getItemSubtotal(item))}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => item.qty === 1 ? removeFromCart(item.product.id!) : updateQty(item.product.id!, -1)}>
-                        {item.qty === 1 ? <X className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                      </Button>
-                      <input
-                        key={item.qty}
-                        type="number"
-                        inputMode="numeric"
-                        defaultValue={item.qty}
-                        onBlur={e => {
-                          const val = parseInt(e.target.value);
-                          if (!isNaN(val) && val >= 1) {
-                            if (isStockManaged(item.product) && val > item.product.stock) {
-                              toast.error(t('cashier.toast.stockLowWithMax', { max: item.product.stock }));
-                              e.target.value = String(item.product.stock);
-                              setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: item.product.stock } : c));
-                            } else {
-                              setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: val } : c));
-                            }
-                          } else {
-                            e.target.value = String(item.qty);
-                          }
-                        }}
-                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                        className="w-10 h-8 text-center text-sm font-bold bg-transparent border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => updateQty(item.product.id!, 1)}>
-                        <Plus className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {item.notes ? (
-                      <button
-                        className="flex items-center gap-1 text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full"
-                        onClick={() => { setEditingItemNotes(item.product.id!); setTempItemNotes(item.notes || ''); }}
-                      >
-                        <Pencil className="w-2.5 h-2.5" />
-                        {item.notes}
-                      </button>
-                    ) : (
-                      <button
-                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                        onClick={() => { setEditingItemNotes(item.product.id!); setTempItemNotes(''); }}
-                      >
-                        <Pencil className="w-2.5 h-2.5" />
-                        {t('cashier.itemNotes.add')}
-                      </button>
-                    )}
-                    {item.discountType ? (
-                      <button
-                        className="flex items-center gap-1 text-[10px] text-destructive bg-destructive/10 px-2 py-0.5 rounded-full"
-                        onClick={() => openItemDiscount(item)}
-                      >
-                        <Tag className="w-2.5 h-2.5" />
-                        {t('cashier.itemDiscount.change')}
-                      </button>
-                    ) : (
-                      <button
-                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                        onClick={() => openItemDiscount(item)}
-                      >
-                        <Tag className="w-2.5 h-2.5" />
-                        {t('cashier.itemDiscount.add')}
-                      </button>
-                    )}
-                  </div>
-                  {editingItemNotes === item.product.id && (
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        autoFocus
-                        value={tempItemNotes}
-                        onChange={e => setTempItemNotes(e.target.value)}
-                        placeholder={t('cashier.itemNotes.placeholder')}
-                        className="h-8 text-xs"
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') { updateItemNotes(item.product.id!, tempItemNotes); setEditingItemNotes(null); }
-                          if (e.key === 'Escape') setEditingItemNotes(null);
-                        }}
-                      />
-                      <Button size="sm" className="h-8 text-xs" onClick={() => { updateItemNotes(item.product.id!, tempItemNotes); setEditingItemNotes(null); }}>{t('cashier.buttons.ok')}</Button>
-                    </div>
-                  )}
-                </div>
-              ))}
+          {/* Search */}
+          <div className="flex gap-2 mb-3 px-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder={t('cashier.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-10" />
             </div>
+            <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setScannerOpen(true)}>
+              <ScanBarcode className="w-5 h-5" />
+            </Button>
+          </div>
 
-            <div className="flex gap-2 px-4 mb-2">
-              <CustomerPicker
-                customers={customers ?? []}
-                value={customerName}
-                customerId={customerId}
-                onChange={(name, id) => { setCustomerName(name); setCustomerId(id); }}
-                className="flex-1 [&_input]:h-9 [&_input]:text-xs"
+          {/* SKU / Barcode scan input */}
+          <div className="flex gap-2 mb-3 px-1">
+            <div className="relative flex-1">
+              <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                ref={scanInputRef}
+                placeholder={t('cashier.scanPlaceholder')}
+                value={scanInput}
+                onChange={e => setScanInput(e.target.value)}
+                onKeyDown={handleScanKeyDown}
+                className="pl-9 h-10 text-sm"
               />
-              <div className="relative flex-[0.6]">
-                <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  placeholder={t('cashier.checkout.table')}
-                  value={tableNumber}
-                  onChange={e => setTableNumber(e.target.value)}
-                  className="pl-8 h-9 text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="border-t pt-4 space-y-3 px-4 pb-4">
-              {txDiscountAmount > 0 ? (
-                <button
-                  onClick={() => { setTempDiscountType(txDiscountType!); setTempDiscountValue(txDiscountValue); setDiscountDialogOpen(true); }}
-                  className="flex items-center gap-1.5 text-xs text-destructive font-medium"
-                >
-                  <Tag className="w-3.5 h-3.5" />
-                  {t('cashier.cartDiscount.label')}: {txDiscountType === 'percentage' ? `${txDiscountValue}%` : rp(Number(txDiscountValue))}
-                  <span className="text-[10px] underline ml-1">{t('cashier.cartDiscount.change')}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => { setTempDiscountType('nominal'); setTempDiscountValue(''); setDiscountDialogOpen(true); }}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <Tag className="w-3.5 h-3.5" />
-                  <span>{t('cashier.cartDiscount.add')}</span>
-                </button>
-              )}
-
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t('cashier.cartDiscount.subtotal')}</span>
-                <span className="font-medium">{rp(subtotal)}</span>
-              </div>
-              {txDiscountAmount > 0 && (
-                <div className="flex justify-between text-sm text-destructive">
-                  <span>{t('cashier.cartDiscount.discount')}</span>
-                  <span>-{rp(txDiscountAmount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-lg font-bold">
-                <span>{t('cashier.cartDiscount.total')}</span>
-                <span className="text-primary">{rp(total)}</span>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 h-12 text-sm font-semibold"
-                  onClick={() => setSaveConfirmOpen(true)}
-                  disabled={cart.length === 0}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {t('cashier.buttons.saveBill')}
-                </Button>
-                <Button
-                  className="flex-1 h-12 text-sm font-semibold"
-                  onClick={() => { setCheckoutOpen(true); setUseDebt(false); setPaymentMethodId(paymentMethods?.[0]?.id?.toString() ?? ''); setPaymentAmount(total.toString()); setIsQuickAdding(false); }}
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  {t('cashier.buttons.pay')}
-                </Button>
-              </div>
-
-              {editingTxId && can('delete_transaction') && (
-                <Button
-                  variant="outline"
-                  className="w-full h-10 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
-                  onClick={handleCancelFromCart}
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  {t('cashier.buttons.cancelBill')}
-                </Button>
-              )}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Category chips */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-3 pb-1 pr-4" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
+            <button onClick={() => setFilterCategory('all')} className={cn('shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors', filterCategory === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+              {t('cashier.categoryAll')}
+            </button>
+            {categories?.map(c => (
+              <button key={c.id} onClick={() => setFilterCategory(c.id!.toString())} className={cn('shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors', filterCategory === c.id!.toString() ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+                {c.icon} {c.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Product Grid */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+            {filtered.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-sm text-muted-foreground">
+                  {products && products.length > 0
+                    ? t('cashier.empty.outOfStock')
+                    : t('cashier.empty.noProducts')}
+                </p>
+              </div>
+            ) : layoutMode === 'rows' ? (
+              <div className="space-y-1.5 px-0.5 pb-2">
+                {filtered.map(p => (
+                  <Card key={p.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]" onClick={() => addToCart(p)}>
+                    <CardContent className="p-2 flex items-center gap-3">
+                      <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                        {p.photo ? (
+                          <img src={p.photo} alt={p.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <PackageIcon className="w-5 h-5 text-muted-foreground/30" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start gap-2">
+                          <h3 className="text-xs font-semibold truncate">{p.name}</h3>
+                          <p className="text-xs font-bold text-primary shrink-0">{rp(p.price)}</p>
+                        </div>
+                        {p.description && (
+                          <p className="text-[10px] text-muted-foreground truncate" title={p.description}>
+                            {p.description}
+                          </p>
+                        )}
+                        <div className="flex justify-between items-center mt-1">
+                          {isStockManaged(p) ? (
+                            <p className="text-[10px] text-muted-foreground">{t('cashier.productCard.stock', { stock: p.stock, unit: p.unit })}</p>
+                          ) : (
+                            <p className="text-[10px] text-primary">{t('cashier.productCard.alwaysAvailable')}</p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {filtered.map(p => (
+                  <Card key={p.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]" onClick={() => addToCart(p)}>
+                    <CardContent className="p-0">
+                      <div className="w-full aspect-square bg-muted rounded-t-lg overflow-hidden flex items-center justify-center">
+                        {p.photo ? (
+                          <img src={p.photo} alt={p.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <PackageIcon className="w-8 h-8 text-muted-foreground/30" />
+                        )}
+                      </div>
+                      <div className="p-2.5">
+                        <h3 className="text-xs font-semibold truncate">{p.name}</h3>
+                        <p className="text-sm font-bold text-primary mt-0.5">{rp(p.price)}</p>
+                        {p.description && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={p.description}>
+                            {p.description}
+                          </p>
+                        )}
+                        {isStockManaged(p) ? (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{t('cashier.productCard.stock', { stock: p.stock, unit: p.unit })}</p>
+                        ) : (
+                          <p className="text-[10px] text-primary mt-0.5">{t('cashier.productCard.alwaysAvailable')}</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Cart Panel */}
+        <div className="hidden md:flex md:w-80 lg:w-96 flex-col overflow-hidden bg-card rounded-xl border border-border shrink-0">
+          <div className="p-4 border-b border-border shrink-0">
+            <h3 className="text-base font-bold flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4 text-primary" />
+              {t('cashier.cart.title', { count: cartCount })}
+              {editingTxId && <span className="text-xs font-normal text-muted-foreground">{t('cashier.cart.editLabel')}</span>}
+            </h3>
+          </div>
+          {cart.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <p className="text-sm text-muted-foreground">{t('cashier.cart.empty')}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto space-y-3 p-4">
+                {cart.map(item => (
+                  <div key={item.product.id} className="bg-muted/50 p-3 rounded-xl space-y-1.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{item.product.name}</p>
+                        <p className="text-xs text-muted-foreground">{rp(item.product.price)} × {item.qty}</p>
+                        {item.discountType && getItemDiscountAmount(item) > 0 && (
+                          <p className="text-[10px] text-destructive">
+                            {t('cashier.cartDiscount.label')}: {item.discountType === 'percentage' ? `${item.discountValue}%` : rp(item.discountValue)} (-{rp(getItemDiscountAmount(item))})
+                          </p>
+                        )}
+                        <p className="text-sm font-bold text-primary">{rp(getItemSubtotal(item))}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => item.qty === 1 ? removeFromCart(item.product.id!) : updateQty(item.product.id!, -1)}>
+                          {item.qty === 1 ? <X className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                        </Button>
+                        <input
+                          key={item.qty}
+                          type="number"
+                          inputMode="numeric"
+                          defaultValue={item.qty}
+                          onBlur={e => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val >= 1) {
+                              if (isStockManaged(item.product) && val > item.product.stock) {
+                                toast.error(t('cashier.toast.stockLowWithMax', { max: item.product.stock }));
+                                e.target.value = String(item.product.stock);
+                                setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: item.product.stock } : c));
+                              } else {
+                                setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: val } : c));
+                              }
+                            } else {
+                              e.target.value = String(item.qty);
+                            }
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                          className="w-10 h-8 text-center text-sm font-bold bg-transparent border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => updateQty(item.product.id!, 1)}>
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {item.notes ? (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full"
+                          onClick={() => { setEditingItemNotes(item.product.id!); setTempItemNotes(item.notes || ''); }}
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                          {item.notes}
+                        </button>
+                      ) : (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                          onClick={() => { setEditingItemNotes(item.product.id!); setTempItemNotes(''); }}
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                          {t('cashier.itemNotes.add')}
+                        </button>
+                      )}
+                      {item.discountType ? (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-destructive bg-destructive/10 px-2 py-0.5 rounded-full"
+                          onClick={() => openItemDiscount(item)}
+                        >
+                          <Tag className="w-2.5 h-2.5" />
+                          {t('cashier.itemDiscount.change')}
+                        </button>
+                      ) : (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                          onClick={() => openItemDiscount(item)}
+                        >
+                          <Tag className="w-2.5 h-2.5" />
+                          {t('cashier.itemDiscount.add')}
+                        </button>
+                      )}
+                    </div>
+                    {editingItemNotes === item.product.id && (
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          autoFocus
+                          value={tempItemNotes}
+                          onChange={e => setTempItemNotes(e.target.value)}
+                          placeholder={t('cashier.itemNotes.placeholder')}
+                          className="h-8 text-xs"
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { updateItemNotes(item.product.id!, tempItemNotes); setEditingItemNotes(null); }
+                            if (e.key === 'Escape') setEditingItemNotes(null);
+                          }}
+                        />
+                        <Button size="sm" className="h-8 text-xs" onClick={() => { updateItemNotes(item.product.id!, tempItemNotes); setEditingItemNotes(null); }}>{t('cashier.buttons.ok')}</Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2 px-4 mb-2">
+                <CustomerPicker
+                  customers={customers ?? []}
+                  value={customerName}
+                  customerId={customerId}
+                  onChange={(name, id) => { setCustomerName(name); setCustomerId(id); }}
+                  className="flex-1 [&_input]:h-9 [&_input]:text-xs"
+                />
+                <div className="relative flex-[0.6]">
+                  <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder={t('cashier.checkout.table')}
+                    value={tableNumber}
+                    onChange={e => setTableNumber(e.target.value)}
+                    className="pl-8 h-9 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t pt-4 space-y-3 px-4 pb-4">
+                {txDiscountAmount > 0 ? (
+                  <button
+                    onClick={() => { setTempDiscountType(txDiscountType!); setTempDiscountValue(txDiscountValue); setDiscountDialogOpen(true); }}
+                    className="flex items-center gap-1.5 text-xs text-destructive font-medium"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                    {t('cashier.cartDiscount.label')}: {txDiscountType === 'percentage' ? `${txDiscountValue}%` : rp(Number(txDiscountValue))}
+                    <span className="text-[10px] underline ml-1">{t('cashier.cartDiscount.change')}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setTempDiscountType('nominal'); setTempDiscountValue(''); setDiscountDialogOpen(true); }}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>{t('cashier.cartDiscount.add')}</span>
+                  </button>
+                )}
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t('cashier.cartDiscount.subtotal')}</span>
+                  <span className="font-medium">{rp(subtotal)}</span>
+                </div>
+                {txDiscountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-destructive">
+                    <span>{t('cashier.cartDiscount.discount')}</span>
+                    <span>-{rp(txDiscountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold">
+                  <span>{t('cashier.cartDiscount.total')}</span>
+                  <span className="text-primary">{rp(total)}</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-12 text-sm font-semibold"
+                    onClick={() => setSaveConfirmOpen(true)}
+                    disabled={cart.length === 0}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {t('cashier.buttons.saveBill')}
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 text-sm font-semibold"
+                    onClick={() => { setCheckoutOpen(true); setUseDebt(false); setPaymentMethodId(paymentMethods?.[0]?.id?.toString() ?? ''); setPaymentAmount(total.toString()); setIsQuickAdding(false); }}
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    {t('cashier.buttons.pay')}
+                  </Button>
+                </div>
+
+                {editingTxId && can('delete_transaction') && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
+                    onClick={handleCancelFromCart}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    {t('cashier.buttons.cancelBill')}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>{/* end flex row */}
 
       {/* Cart FAB (mobile only) */}
@@ -1036,208 +1041,208 @@ export default function Kasir() {
 
       {/* Cart Sheet (mobile only) */}
       <div className="md:hidden">
-      <Sheet open={cartOpen} onOpenChange={(open) => { setCartOpen(open); if (!open) setEditingItemNotes(null); }}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl max-w-lg mx-auto">
-          <SheetHeader>
-            <SheetTitle className="text-left">
-              {t('cashier.cart.title', { count: cartCount })}
-              {editingTxId && <span className="text-xs font-normal text-muted-foreground ml-2">{t('cashier.cart.editOpenBillLabel')}</span>}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col h-full mt-4">
-            <div className="flex-1 overflow-y-auto space-y-3 pb-4">
-              {cart.map(item => (
-                <div key={item.product.id} className="bg-muted/50 p-3 rounded-xl space-y-1.5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{item.product.name}</p>
-                      <p className="text-xs text-muted-foreground">{rp(item.product.price)} × {item.qty}</p>
-                      {item.discountType && getItemDiscountAmount(item) > 0 && (
-                        <p className="text-[10px] text-destructive">
-                          {t('cashier.cartDiscount.label')}: {item.discountType === 'percentage' ? `${item.discountValue}%` : rp(item.discountValue)} (-{rp(getItemDiscountAmount(item))})
-                        </p>
-                      )}
-                      <p className="text-sm font-bold text-primary">{rp(getItemSubtotal(item))}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => item.qty === 1 ? removeFromCart(item.product.id!) : updateQty(item.product.id!, -1)}>
-                        {item.qty === 1 ? <X className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                      </Button>
-                      <input
-                        key={item.qty}
-                        type="number"
-                        inputMode="numeric"
-                        defaultValue={item.qty}
-                        onBlur={e => {
-                          const val = parseInt(e.target.value);
-                          if (!isNaN(val) && val >= 1) {
-                            if (isStockManaged(item.product) && val > item.product.stock) {
-                              toast.error(t('cashier.toast.stockLowWithMax', { max: item.product.stock }));
-                              e.target.value = String(item.product.stock);
-                              setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: item.product.stock } : c));
+        <Sheet open={cartOpen} onOpenChange={(open) => { setCartOpen(open); if (!open) setEditingItemNotes(null); }}>
+          <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl max-w-lg mx-auto">
+            <SheetHeader>
+              <SheetTitle className="text-left">
+                {t('cashier.cart.title', { count: cartCount })}
+                {editingTxId && <span className="text-xs font-normal text-muted-foreground ml-2">{t('cashier.cart.editOpenBillLabel')}</span>}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col h-full mt-4">
+              <div className="flex-1 overflow-y-auto space-y-3 pb-4">
+                {cart.map(item => (
+                  <div key={item.product.id} className="bg-muted/50 p-3 rounded-xl space-y-1.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{item.product.name}</p>
+                        <p className="text-xs text-muted-foreground">{rp(item.product.price)} × {item.qty}</p>
+                        {item.discountType && getItemDiscountAmount(item) > 0 && (
+                          <p className="text-[10px] text-destructive">
+                            {t('cashier.cartDiscount.label')}: {item.discountType === 'percentage' ? `${item.discountValue}%` : rp(item.discountValue)} (-{rp(getItemDiscountAmount(item))})
+                          </p>
+                        )}
+                        <p className="text-sm font-bold text-primary">{rp(getItemSubtotal(item))}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => item.qty === 1 ? removeFromCart(item.product.id!) : updateQty(item.product.id!, -1)}>
+                          {item.qty === 1 ? <X className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                        </Button>
+                        <input
+                          key={item.qty}
+                          type="number"
+                          inputMode="numeric"
+                          defaultValue={item.qty}
+                          onBlur={e => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val >= 1) {
+                              if (isStockManaged(item.product) && val > item.product.stock) {
+                                toast.error(t('cashier.toast.stockLowWithMax', { max: item.product.stock }));
+                                e.target.value = String(item.product.stock);
+                                setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: item.product.stock } : c));
+                              } else {
+                                setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: val } : c));
+                              }
                             } else {
-                              setCart(prev => prev.map(c => c.product.id === item.product.id ? { ...c, qty: val } : c));
+                              e.target.value = String(item.qty);
                             }
-                          } else {
-                            e.target.value = String(item.qty);
-                          }
-                        }}
-                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                        className="w-10 h-8 text-center text-sm font-bold bg-transparent border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => updateQty(item.product.id!, 1)}>
-                        <Plus className="w-3 h-3" />
-                      </Button>
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                          className="w-10 h-8 text-center text-sm font-bold bg-transparent border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => updateQty(item.product.id!, 1)}>
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  {/* Item notes & discount row */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {item.notes ? (
-                      <button
-                        className="flex items-center gap-1 text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full"
-                        onClick={() => { setEditingItemNotes(item.product.id!); setTempItemNotes(item.notes || ''); }}
-                      >
-                        <Pencil className="w-2.5 h-2.5" />
-                        {item.notes}
-                      </button>
-                    ) : (
-                      <button
-                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                        onClick={() => { setEditingItemNotes(item.product.id!); setTempItemNotes(''); }}
-                      >
-                        <Pencil className="w-2.5 h-2.5" />
-                        {t('cashier.itemNotes.add')}
-                      </button>
-                    )}
-                    {item.discountType ? (
-                      <button
-                        className="flex items-center gap-1 text-[10px] text-destructive bg-destructive/10 px-2 py-0.5 rounded-full"
-                        onClick={() => openItemDiscount(item)}
-                      >
-                        <Tag className="w-2.5 h-2.5" />
-                        {t('cashier.itemDiscount.change')}
-                      </button>
-                    ) : (
-                      <button
-                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                        onClick={() => openItemDiscount(item)}
-                      >
-                        <Tag className="w-2.5 h-2.5" />
-                        {t('cashier.itemDiscount.add')}
-                      </button>
-                    )}
-                  </div>
-                  {/* Inline notes editor */}
-                  {editingItemNotes === item.product.id && (
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        autoFocus
-                        value={tempItemNotes}
-                        onChange={e => setTempItemNotes(e.target.value)}
-                        placeholder={t('cashier.itemNotes.placeholder')}
-                        className="h-8 text-xs"
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') { updateItemNotes(item.product.id!, tempItemNotes); setEditingItemNotes(null); }
-                          if (e.key === 'Escape') setEditingItemNotes(null);
-                        }}
-                      />
-                      <Button size="sm" className="h-8 text-xs" onClick={() => { updateItemNotes(item.product.id!, tempItemNotes); setEditingItemNotes(null); }}>{t('cashier.buttons.ok')}</Button>
+                    {/* Item notes & discount row */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {item.notes ? (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full"
+                          onClick={() => { setEditingItemNotes(item.product.id!); setTempItemNotes(item.notes || ''); }}
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                          {item.notes}
+                        </button>
+                      ) : (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                          onClick={() => { setEditingItemNotes(item.product.id!); setTempItemNotes(''); }}
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                          {t('cashier.itemNotes.add')}
+                        </button>
+                      )}
+                      {item.discountType ? (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-destructive bg-destructive/10 px-2 py-0.5 rounded-full"
+                          onClick={() => openItemDiscount(item)}
+                        >
+                          <Tag className="w-2.5 h-2.5" />
+                          {t('cashier.itemDiscount.change')}
+                        </button>
+                      ) : (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                          onClick={() => openItemDiscount(item)}
+                        >
+                          <Tag className="w-2.5 h-2.5" />
+                          {t('cashier.itemDiscount.add')}
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                    {/* Inline notes editor */}
+                    {editingItemNotes === item.product.id && (
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          autoFocus
+                          value={tempItemNotes}
+                          onChange={e => setTempItemNotes(e.target.value)}
+                          placeholder={t('cashier.itemNotes.placeholder')}
+                          className="h-8 text-xs"
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { updateItemNotes(item.product.id!, tempItemNotes); setEditingItemNotes(null); }
+                            if (e.key === 'Escape') setEditingItemNotes(null);
+                          }}
+                        />
+                        <Button size="sm" className="h-8 text-xs" onClick={() => { updateItemNotes(item.product.id!, tempItemNotes); setEditingItemNotes(null); }}>{t('cashier.buttons.ok')}</Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
 
-            {/* Customer / Table quick inputs */}
-            <div className="flex gap-2 mb-2">
-              <CustomerPicker
-                customers={customers ?? []}
-                value={customerName}
-                customerId={customerId}
-                onChange={(name, id) => { setCustomerName(name); setCustomerId(id); }}
-                className="flex-1 [&_input]:h-9 [&_input]:text-xs"
-              />
-              <div className="relative flex-[0.6]">
-                <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  placeholder={t('cashier.checkout.table')}
-                  value={tableNumber}
-                  onChange={e => setTableNumber(e.target.value)}
-                  className="pl-8 h-9 text-xs"
+              {/* Customer / Table quick inputs */}
+              <div className="flex gap-2 mb-2">
+                <CustomerPicker
+                  customers={customers ?? []}
+                  value={customerName}
+                  customerId={customerId}
+                  onChange={(name, id) => { setCustomerName(name); setCustomerId(id); }}
+                  className="flex-1 [&_input]:h-9 [&_input]:text-xs"
                 />
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className="border-t pt-4 space-y-3 pb-6">
-              {txDiscountAmount > 0 ? (
-                <button
-                  onClick={() => { setTempDiscountType(txDiscountType!); setTempDiscountValue(txDiscountValue); setDiscountDialogOpen(true); }}
-                  className="flex items-center gap-1.5 text-xs text-destructive font-medium"
-                >
-                  <Tag className="w-3.5 h-3.5" />
-                  {t('cashier.cartDiscount.label')}: {txDiscountType === 'percentage' ? `${txDiscountValue}%` : rp(Number(txDiscountValue))}
-                  <span className="text-[10px] underline ml-1">{t('cashier.cartDiscount.change')}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => { setTempDiscountType('nominal'); setTempDiscountValue(''); setDiscountDialogOpen(true); }}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <Tag className="w-3.5 h-3.5" />
-                  <span>{t('cashier.cartDiscount.add')}</span>
-                </button>
-              )}
-
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t('cashier.cartDiscount.subtotal')}</span>
-                <span className="font-medium">{rp(subtotal)}</span>
-              </div>
-              {txDiscountAmount > 0 && (
-                <div className="flex justify-between text-sm text-destructive">
-                  <span>{t('cashier.cartDiscount.discount')}</span>
-                  <span>-{rp(txDiscountAmount)}</span>
+                <div className="relative flex-[0.6]">
+                  <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder={t('cashier.checkout.table')}
+                    value={tableNumber}
+                    onChange={e => setTableNumber(e.target.value)}
+                    className="pl-8 h-9 text-xs"
+                  />
                 </div>
-              )}
-              <div className="flex justify-between text-lg font-bold">
-                <span>{t('cashier.cartDiscount.total')}</span>
-                <span className="text-primary">{rp(total)}</span>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 h-12 text-sm font-semibold"
-                  onClick={() => setSaveConfirmOpen(true)}
-                  disabled={cart.length === 0}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {t('cashier.buttons.saveBill')}
-                </Button>
-                <Button
-                  className="flex-1 h-12 text-sm font-semibold"
-                  onClick={() => { setCheckoutOpen(true); setUseDebt(false); setPaymentMethodId(paymentMethods?.[0]?.id?.toString() ?? ''); setPaymentAmount(total.toString()); setIsQuickAdding(false); }}
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  {t('cashier.buttons.pay')}
-                </Button>
-              </div>
+              {/* Summary */}
+              <div className="border-t pt-4 space-y-3 pb-6">
+                {txDiscountAmount > 0 ? (
+                  <button
+                    onClick={() => { setTempDiscountType(txDiscountType!); setTempDiscountValue(txDiscountValue); setDiscountDialogOpen(true); }}
+                    className="flex items-center gap-1.5 text-xs text-destructive font-medium"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                    {t('cashier.cartDiscount.label')}: {txDiscountType === 'percentage' ? `${txDiscountValue}%` : rp(Number(txDiscountValue))}
+                    <span className="text-[10px] underline ml-1">{t('cashier.cartDiscount.change')}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setTempDiscountType('nominal'); setTempDiscountValue(''); setDiscountDialogOpen(true); }}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>{t('cashier.cartDiscount.add')}</span>
+                  </button>
+                )}
 
-              {editingTxId && can('delete_transaction') && (
-                <Button
-                  variant="outline"
-                  className="w-full h-10 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
-                  onClick={handleCancelFromCart}
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  {t('cashier.buttons.cancelBill')}
-                </Button>
-              )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t('cashier.cartDiscount.subtotal')}</span>
+                  <span className="font-medium">{rp(subtotal)}</span>
+                </div>
+                {txDiscountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-destructive">
+                    <span>{t('cashier.cartDiscount.discount')}</span>
+                    <span>-{rp(txDiscountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold">
+                  <span>{t('cashier.cartDiscount.total')}</span>
+                  <span className="text-primary">{rp(total)}</span>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-12 text-sm font-semibold"
+                    onClick={() => setSaveConfirmOpen(true)}
+                    disabled={cart.length === 0}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {t('cashier.buttons.saveBill')}
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 text-sm font-semibold"
+                    onClick={() => { setCheckoutOpen(true); setUseDebt(false); setPaymentMethodId(paymentMethods?.[0]?.id?.toString() ?? ''); setPaymentAmount(total.toString()); setIsQuickAdding(false); }}
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    {t('cashier.buttons.pay')}
+                  </Button>
+                </div>
+
+                {editingTxId && can('delete_transaction') && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
+                    onClick={handleCancelFromCart}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    {t('cashier.buttons.cancelBill')}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </SheetContent>
+        </Sheet>
       </div>{/* end mobile cart wrapper */}
 
       {/* Open Bills Sheet */}
@@ -1616,8 +1621,8 @@ export default function Kasir() {
           paymentMethodName={
             lastTransaction.debtAmount
               ? (lastTransaction.paymentAmount > 0
-                  ? `${paymentMethods?.find(pm => pm.id === lastTransaction.paymentMethodId)?.name || t('cashier.paymentMethod.initialPayment')} + ${t('cashier.paymentMethod.debt')}`
-                  : t('cashier.paymentMethod.debt'))
+                ? `${paymentMethods?.find(pm => pm.id === lastTransaction.paymentMethodId)?.name || t('cashier.paymentMethod.initialPayment')} + ${t('cashier.paymentMethod.debt')}`
+                : t('cashier.paymentMethod.debt'))
               : paymentMethods?.find(pm => pm.id === lastTransaction.paymentMethodId)?.name || t('cashier.paymentMethod.cash')
           }
           cashierName={lastTransaction.createdBy ? allUsers?.find(u => u.id === lastTransaction.createdBy)?.name : undefined}
