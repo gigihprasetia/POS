@@ -1120,7 +1120,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
         {/* Navigation */}
         <div
-          className="px-4 pt-4 flex items-center gap-3 bg-red-500"
+          className="px-4 pt-4 flex items-center gap-3 "
           style={{
             paddingBottom: "max(2rem, env(safe-area-inset-bottom, 2rem))",
           }}

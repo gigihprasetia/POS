@@ -21,6 +21,7 @@ import BarcodeScanner from '@/components/BarcodeScanner';
 import { useTranslation } from 'react-i18next';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { downloadOrShareFile } from '@/lib/file-utils';
+import TotalProducts from './TotalProducts';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -578,11 +579,15 @@ export default function Produk() {
   return (
     <div className="px-4 pt-6 pb-4 space-y-4">
       {/* Header */}
+      <div>
+
+      </div>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold flex items-center gap-2">
           <PackageIcon className="w-5 h-5 text-primary" />
           {t('title')}
         </h1>
+
         {canManage && (
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setImportDialogOpen(true)} className="h-9 gap-1.5">
@@ -638,6 +643,7 @@ export default function Produk() {
       {/* Product count */}
       <p className="text-xs text-muted-foreground">{t('productCount', { count: filtered.length })}</p>
 
+      <TotalProducts />
       {/* Product List */}
       {filtered.length === 0 ? (
         <div className="text-center py-12">
