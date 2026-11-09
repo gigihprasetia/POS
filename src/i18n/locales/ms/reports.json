@@ -7,15 +7,22 @@
   },
   "tabs": {
     "daily": "Harian",
-    "7days": "7 Hari",
-    "30days": "30 Hari"
+    "weekly": "Mingguan",
+    "monthly": "Bulanan"
   },
   "daily": {
-    "reportDate": "Tarikh Laporan",
+    "fromDate": "Dari Tarikh",
+    "toDate": "Sehingga Tarikh",
     "includeExpenses": "Masukkan perbelanjaan",
     "includeExpensesHint": "Perbelanjaan akan mengurangkan untung bersih",
     "printClosingReport": "Cetak Laporan Penutup",
-    "noSalesSelectedDate": "* Tiada transaksi jualan pada tarikh terpilih"
+    "noSalesSelectedDate": "* Tiada transaksi jualan dalam julat tarikh terpilih"
+  },
+  "weekly": {
+    "reportWeek": "Pilih tarikh dalam minggu"
+  },
+  "monthly": {
+    "reportMonth": "Pilih bulan"
   },
   "summary": {
     "transactions": "Transaksi",
@@ -23,7 +30,7 @@
     "profit": "Untung"
   },
   "dailySales": {
-    "title": "Jumlah Jualan Harian",
+    "title": "Ringkasan Jualan",
     "grossSales": "Jumlah Jualan Kasar",
     "cashIn": "Tunai Masuk",
     "avgTransaction": "Purata Transaksi",
@@ -55,6 +62,7 @@
     "title": "Produk Terlaris",
     "daily": "Produk Terlaris Harian",
     "noData": "Tiada data jualan lagi",
+    "totalSold": "{{count}} produk terjual",
     "sold": "{{qty}} terjual · untung {{profit}}"
   },
   "fallbacks": {

@@ -11,9 +11,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { exportReportToExcel } from '@/lib/export-report';
+import ReportDatePicker from '@/components/reports/ReportDatePicker';
 
 interface ExportReportDialogProps {
   open: boolean;
@@ -92,12 +92,11 @@ export default function ExportReportDialog({
               <Label htmlFor="export-start" className="text-xs">
                 {t('exportDialog.fromDate')}
               </Label>
-              <Input
+              <ReportDatePicker
                 id="export-start"
-                type="date"
                 value={startDate}
                 max={endDate || undefined}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={setStartDate}
                 className="h-11"
               />
             </div>
@@ -105,12 +104,11 @@ export default function ExportReportDialog({
               <Label htmlFor="export-end" className="text-xs">
                 {t('exportDialog.toDate')}
               </Label>
-              <Input
+              <ReportDatePicker
                 id="export-end"
-                type="date"
                 value={endDate}
                 min={startDate || undefined}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={setEndDate}
                 className="h-11"
               />
             </div>

@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { addDays, format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import LockedPage from '@/components/LockedPage';
 import ExportReportDialog from '@/components/reports/ExportReportDialog';
+import ReportDatePicker from '@/components/reports/ReportDatePicker';
 import UserTypeModal from '@/components/UserTypeModal';
 import { shouldShowUserTypeSurvey } from '@/lib/user-type';
 import { toast } from 'sonner';
@@ -30,8 +30,11 @@ export default function Laporan() {
   const numberLocale = NUMBER_LOCALES[i18n.language] ?? 'id-ID';
   const currencySymbol = CURRENCY_SYMBOL[i18n.language] ?? 'Rp';
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
-  const [period, setPeriod] = useState<'daily' | '7' | '30'>('daily');
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [selectedStartDate, setSelectedStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedEndDate, setSelectedEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedWeekDate, setSelectedWeekDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [includeExpenses, setIncludeExpenses] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [surveyOpen, setSurveyOpen] = useState(false);
@@ -39,8 +42,6 @@ export default function Laporan() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportData, setReportData] = useState<DailyReportPrintData | null>(null);
   const [shouldRequestReviewOnClose, setShouldRequestReviewOnClose] = useState(false);
-  const days = period === 'daily' ? 1 : Number(period);
-
   useEffect(() => {
     if (shouldShowUserTypeSurvey()) {
       const t = setTimeout(() => setSurveyOpen(true), 600);
@@ -50,11 +51,19 @@ export default function Laporan() {
 
   const dateRange = (() => {
     if (period === 'daily') {
-      const date = new Date(`${selectedDate}T00:00:00`);
-      return { start: startOfDay(date), end: endOfDay(date) };
+      return {
+        start: startOfDay(new Date(`${selectedStartDate}T00:00:00`)),
+        end: endOfDay(new Date(`${selectedEndDate}T00:00:00`)),
+      };
     }
 
-    return { start: startOfDay(subDays(new Date(), days - 1)), end: endOfDay(new Date()) };
+    if (period === 'weekly') {
+      const date = new Date(`${selectedWeekDate}T00:00:00`);
+      return { start: startOfWeek(date, { weekStartsOn: 1 }), end: endOfWeek(date, { weekStartsOn: 1 }) };
+    }
+
+    const date = new Date(`${selectedMonth}-01T00:00:00`);
+    return { start: startOfMonth(date), end: endOfMonth(date) };
   })();
 
   const transactions = useLiveQuery(async () => {
@@ -89,6 +98,7 @@ export default function Laporan() {
   }
 
   const allItems = txItems ?? [];
+  const totalProductsSold = allItems.reduce((sum, item) => sum + item.quantity, 0);
   const totalSales = transactions?.reduce((s, t) => s + t.total, 0) ?? 0;
   const totalProfit = transactions?.reduce((s, t) => s + t.profit, 0) ?? 0;
   const txCount = transactions?.length ?? 0;
@@ -130,13 +140,8 @@ export default function Laporan() {
   const chartData = (() => {
     const map: Record<string, number> = {};
 
-    if (period === 'daily') {
-      map[format(new Date(`${selectedDate}T00:00:00`), 'dd/MM')] = 0;
-    } else {
-      for (let i = days - 1; i >= 0; i--) {
-        const d = format(subDays(new Date(), i), 'dd/MM');
-        map[d] = 0;
-      }
+    for (let date = startOfDay(dateRange.start); date <= dateRange.end; date = addDays(date, 1)) {
+      map[format(date, 'dd/MM')] = 0;
     }
 
     transactions?.forEach(t => {
@@ -177,11 +182,17 @@ export default function Laporan() {
 
   const handlePrintDailyReport = () => {
     const itemsCount = allItems.reduce((s, item) => s + item.quantity, 0);
-    const formattedDate = format(new Date(`${selectedDate}T00:00:00`), 'dd-MM-yyyy');
+    const formattedStartDate = format(dateRange.start, 'dd-MM-yyyy');
+    const formattedEndDate = format(dateRange.end, 'dd-MM-yyyy');
+    const formattedDate = formattedStartDate === formattedEndDate
+      ? formattedStartDate
+      : `${formattedStartDate} - ${formattedEndDate}`;
     
     const data: DailyReportPrintData = {
       dateStr: formattedDate,
-      periodStr: `${formattedDate} 00:00 - 23:59`,
+      periodStr: formattedStartDate === formattedEndDate
+        ? `${formattedDate} 00:00 - 23:59`
+        : `${formattedStartDate} 00:00 - ${formattedEndDate} 23:59`,
       txCount,
       itemCount: itemsCount,
       grossSales: totalRevenue,
@@ -258,11 +269,11 @@ export default function Laporan() {
         />
       )}
 
-      <Tabs value={period} onValueChange={v => setPeriod(v as 'daily' | '7' | '30')}>
+      <Tabs value={period} onValueChange={v => setPeriod(v as 'daily' | 'weekly' | 'monthly')}>
         <TabsList className="w-full">
           <TabsTrigger value="daily" className="flex-1">{t('tabs.daily')}</TabsTrigger>
-          <TabsTrigger value="7" className="flex-1">{t('tabs.7days')}</TabsTrigger>
-          <TabsTrigger value="30" className="flex-1">{t('tabs.30days')}</TabsTrigger>
+          <TabsTrigger value="weekly" className="flex-1">{t('tabs.weekly')}</TabsTrigger>
+          <TabsTrigger value="monthly" className="flex-1">{t('tabs.monthly')}</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -270,13 +281,26 @@ export default function Laporan() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="report-date" className="text-xs">{t('daily.reportDate')}</Label>
-              <Input
-                id="report-date"
-                type="date"
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="report-start-date" className="text-xs">{t('daily.fromDate')}</Label>
+                  <ReportDatePicker
+                    id="report-start-date"
+                    value={selectedStartDate}
+                    max={selectedEndDate}
+                    onChange={setSelectedStartDate}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="report-end-date" className="text-xs">{t('daily.toDate')}</Label>
+                  <ReportDatePicker
+                    id="report-end-date"
+                    value={selectedEndDate}
+                    min={selectedStartDate}
+                    onChange={setSelectedEndDate}
+                  />
+                </div>
+              </div>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
               <div>
@@ -298,6 +322,27 @@ export default function Laporan() {
                 {t('daily.noSalesSelectedDate')}
               </p>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {period === 'weekly' && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 space-y-1.5">
+            <Label htmlFor="report-week" className="text-xs">{t('weekly.reportWeek')}</Label>
+            <ReportDatePicker id="report-week" value={selectedWeekDate} onChange={setSelectedWeekDate} />
+            <p className="text-[10px] text-muted-foreground">
+              {format(dateRange.start, 'dd/MM/yyyy')} - {format(dateRange.end, 'dd/MM/yyyy')}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {period === 'monthly' && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 space-y-1.5">
+            <Label htmlFor="report-month" className="text-xs">{t('monthly.reportMonth')}</Label>
+            <ReportDatePicker id="report-month" mode="month" value={selectedMonth} onChange={setSelectedMonth} />
           </CardContent>
         </Card>
       )}
@@ -464,7 +509,7 @@ export default function Laporan() {
         </Card>
       )}
 
-      {period !== 'daily' && (
+      {(period !== 'daily' || dateRange.start.getTime() !== startOfDay(dateRange.end).getTime()) && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t('chart.title')}</CardTitle>
@@ -484,9 +529,14 @@ export default function Laporan() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-1.5">
-            <Package className="w-4 h-4" />
-            {t(period === 'daily' ? 'products.daily' : 'products.title')}
+          <CardTitle className="text-sm flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5">
+              <Package className="w-4 h-4 shrink-0" />
+              {t(period === 'daily' ? 'products.daily' : 'products.title')}
+            </span>
+            <span className="text-[10px] font-normal text-muted-foreground whitespace-nowrap">
+              {t('products.totalSold', { count: totalProductsSold })}
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>

@@ -7,15 +7,22 @@
   },
   "tabs": {
     "daily": "Daily",
-    "7days": "7 Days",
-    "30days": "30 Days"
+    "weekly": "Weekly",
+    "monthly": "Monthly"
   },
   "daily": {
-    "reportDate": "Report Date",
+    "fromDate": "From Date",
+    "toDate": "To Date",
     "includeExpenses": "Include expenses",
     "includeExpensesHint": "Expenses will reduce net profit",
     "printClosingReport": "Print Closing Report",
-    "noSalesSelectedDate": "* No sales transactions on selected date"
+    "noSalesSelectedDate": "* No sales transactions in the selected date range"
+  },
+  "weekly": {
+    "reportWeek": "Select a date in the week"
+  },
+  "monthly": {
+    "reportMonth": "Select month"
   },
   "summary": {
     "transactions": "Transactions",
@@ -23,7 +30,7 @@
     "profit": "Profit"
   },
   "dailySales": {
-    "title": "Daily Sales Total",
+    "title": "Sales Summary",
     "grossSales": "Gross Sales",
     "cashIn": "Cash In",
     "avgTransaction": "Avg. Transaction",
@@ -55,6 +62,7 @@
     "title": "Top Products",
     "daily": "Daily Top Products",
     "noData": "No sales data yet",
+    "totalSold": "{{count}} products sold",
     "sold": "{{qty}} sold · profit {{profit}}"
   },
   "fallbacks": {

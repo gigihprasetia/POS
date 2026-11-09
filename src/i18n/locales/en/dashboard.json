@@ -6,6 +6,7 @@
     "salesToday": "Today's Sales",
     "transactions": "{{count}} transactions",
     "profitToday": "Today's Profit",
+    "productsSoldToday": "Products Sold Today",
     "expensesToday": "Today's Expenses",
     "expenseNotes": "{{count}} entries"
   },

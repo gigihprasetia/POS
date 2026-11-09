@@ -34,6 +34,59 @@ interface CartItem {
   notes?: string;
 }
 
+interface CashierDraft {
+  cart: CartItem[];
+  editingTxId: number | null;
+  txDiscountType: 'percentage' | 'nominal' | null;
+  txDiscountValue: string;
+  paymentMethodId: string;
+  paymentAmount: string;
+  useDebt: boolean;
+  customerName: string;
+  customerId?: number;
+  tableNumber: string;
+  remarks: string;
+  isQuickAdding: boolean;
+}
+
+const EMPTY_CASHIER_DRAFT: CashierDraft = {
+  cart: [],
+  editingTxId: null,
+  txDiscountType: null,
+  txDiscountValue: '',
+  paymentMethodId: '',
+  paymentAmount: '',
+  useDebt: false,
+  customerName: '',
+  customerId: undefined,
+  tableNumber: '',
+  remarks: '',
+  isQuickAdding: false,
+};
+
+const readCashierDraft = (): CashierDraft => {
+  try {
+    const savedDraft = sessionStorage.getItem('kg_cashier_draft');
+    if (!savedDraft) return EMPTY_CASHIER_DRAFT;
+
+    const parsed = JSON.parse(savedDraft) as Partial<CashierDraft>;
+    if (!Array.isArray(parsed.cart)) throw new Error('Draft keranjang kasir tidak valid');
+
+    const cart = parsed.cart.filter(item =>
+      item &&
+      item.product &&
+      typeof item.product.id === 'number' &&
+      typeof item.qty === 'number' &&
+      item.qty > 0
+    );
+
+    return { ...EMPTY_CASHIER_DRAFT, ...parsed, cart };
+  } catch (error) {
+    console.error('Gagal memulihkan draft keranjang kasir:', error);
+    return EMPTY_CASHIER_DRAFT;
+  }
+};
+
 const CURRENCY_SYMBOL: Record<string, string> = {
   id: 'Rp',
   en: '$',
@@ -64,14 +117,15 @@ export default function Kasir() {
   const currencySymbol = CURRENCY_SYMBOL[lang] || 'Rp';
   const rp = (n: number) => `${currencySymbol} ${n.toLocaleString(numberLocale)}`;
 
+  const [initialDraft] = useState(readCashierDraft);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [editingTxId, setEditingTxId] = useState<number | null>(null);
+  const [cart, setCart] = useState<CartItem[]>(initialDraft.cart);
+  const [editingTxId, setEditingTxId] = useState<number | null>(initialDraft.editingTxId);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [txDiscountType, setTxDiscountType] = useState<'percentage' | 'nominal' | null>(null);
-  const [txDiscountValue, setTxDiscountValue] = useState('');
+  const [txDiscountType, setTxDiscountType] = useState<'percentage' | 'nominal' | null>(initialDraft.txDiscountType);
+  const [txDiscountValue, setTxDiscountValue] = useState(initialDraft.txDiscountValue);
   const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
   const [tempDiscountType, setTempDiscountType] = useState<'percentage' | 'nominal'>('nominal');
   const [tempDiscountValue, setTempDiscountValue] = useState('');
@@ -79,17 +133,17 @@ export default function Kasir() {
   const [itemDiscountTargetId, setItemDiscountTargetId] = useState<number | null>(null);
   const [itemDiscountType, setItemDiscountType] = useState<'percentage' | 'nominal'>('nominal');
   const [itemDiscountValue, setItemDiscountValue] = useState('');
-  const [paymentMethodId, setPaymentMethodId] = useState<string>('');
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [useDebt, setUseDebt] = useState(false);
-  const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const [paymentMethodId, setPaymentMethodId] = useState(initialDraft.paymentMethodId);
+  const [paymentAmount, setPaymentAmount] = useState(initialDraft.paymentAmount);
+  const [useDebt, setUseDebt] = useState(initialDraft.useDebt);
+  const [isQuickAdding, setIsQuickAdding] = useState(initialDraft.isQuickAdding);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
   const [lastTxItems, setLastTxItems] = useState<TransactionItemRecord[]>([]);
-  const [customerName, setCustomerName] = useState('');
-  const [customerId, setCustomerId] = useState<number | undefined>(undefined);
-  const [tableNumber, setTableNumber] = useState('');
-  const [remarks, setRemarks] = useState('');
+  const [customerName, setCustomerName] = useState(initialDraft.customerName);
+  const [customerId, setCustomerId] = useState<number | undefined>(initialDraft.customerId);
+  const [tableNumber, setTableNumber] = useState(initialDraft.tableNumber);
+  const [remarks, setRemarks] = useState(initialDraft.remarks);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [openBillsOpen, setOpenBillsOpen] = useState(false);
   const [editingItemNotes, setEditingItemNotes] = useState<number | null>(null);
@@ -98,6 +152,7 @@ export default function Kasir() {
   const [cancelTargetTx, setCancelTargetTx] = useState<Transaction | null>(null);
   const [scanInput, setScanInput] = useState('');
   const scanInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
   const [kitchenTicketOpen, setKitchenTicketOpen] = useState(false);
@@ -121,6 +176,63 @@ export default function Kasir() {
   const openBills = useLiveQuery(() => db.transactions.where('status').equals('open').reverse().sortBy('date'));
   const allUsers = useLiveQuery(() => db.users.toArray());
   const customers = useLiveQuery(() => db.customers.where('isDeleted').equals(0).toArray());
+
+  useEffect(() => {
+    if (!products || cart.length === 0) return;
+    setCart(currentCart => {
+      let changed = false;
+      const updatedCart = currentCart.map(item => {
+        const latestProduct = products.find(product => product.id === item.product.id);
+        if (!latestProduct) return item;
+        if (
+          latestProduct.name === item.product.name &&
+          latestProduct.price === item.product.price &&
+          latestProduct.hpp === item.product.hpp &&
+          latestProduct.stock === item.product.stock &&
+          latestProduct.unit === item.product.unit
+        ) return item;
+        changed = true;
+        return { ...item, product: latestProduct };
+      });
+      return changed ? updatedCart : currentCart;
+    });
+  }, [products, cart.length]);
+
+  useEffect(() => {
+    const draft: CashierDraft = {
+      cart,
+      editingTxId,
+      txDiscountType,
+      txDiscountValue,
+      paymentMethodId,
+      paymentAmount,
+      useDebt,
+      customerName,
+      customerId,
+      tableNumber,
+      remarks,
+      isQuickAdding,
+    };
+
+    try {
+      sessionStorage.setItem('kg_cashier_draft', JSON.stringify(draft));
+    } catch (error) {
+      console.error('Gagal menyimpan draft keranjang kasir:', error);
+    }
+  }, [
+    cart,
+    editingTxId,
+    txDiscountType,
+    txDiscountValue,
+    paymentMethodId,
+    paymentAmount,
+    useDebt,
+    customerName,
+    customerId,
+    tableNumber,
+    remarks,
+    isQuickAdding,
+  ]);
 
   // Permission gate — kept render-side (not redirect) so the bottom nav stays
   // intact. All hooks above run unconditionally; we just swap the rendered tree.
@@ -167,6 +279,8 @@ export default function Kasir() {
       }
       return [...prev, { product, qty: 1, discountType: null, discountValue: 0 }];
     });
+    setSearch('');
+    searchInputRef.current?.focus({ preventScroll: true });
   };
 
   const updateQty = (productId: number, delta: number) => {
@@ -713,7 +827,13 @@ export default function Kasir() {
           <div className="flex gap-2 mb-3 px-1">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder={t('cashier.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-10" />
+              <Input
+                ref={searchInputRef}
+                placeholder={t('cashier.searchPlaceholder')}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9 h-10"
+              />
             </div>
             <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setScannerOpen(true)}>
               <ScanBarcode className="w-5 h-5" />

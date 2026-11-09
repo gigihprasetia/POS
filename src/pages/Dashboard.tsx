@@ -56,6 +56,12 @@ export default function Dashboard() {
     return all.filter(t => t.status !== 'open');
   }, []);
 
+  const todayTransactionItems = useLiveQuery(async () => {
+    if (!todayTransactions || todayTransactions.length === 0) return [];
+    const txIds = todayTransactions.map(transaction => transaction.id!).filter(Boolean);
+    return db.transactionItems.where('transactionId').anyOf(txIds).toArray();
+  }, [todayTransactions]);
+
   const openBillsCount = useLiveQuery(async () => {
     const open = await db.transactions.where('status').equals('open').toArray();
     return open.length;
@@ -95,6 +101,7 @@ export default function Dashboard() {
 
   const totalSales = todayTransactions?.reduce((sum, t) => sum + t.total, 0) ?? 0;
   const totalProfit = todayTransactions?.reduce((sum, t) => sum + t.profit, 0) ?? 0;
+  const productsSoldToday = todayTransactionItems?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
   const totalExpensesToday = todayExpenses?.reduce((sum, e) => sum + e.amount, 0) ?? 0;
   const txCount = todayTransactions?.length ?? 0;
   const expenseCount = todayExpenses?.length ?? 0;
@@ -145,6 +152,15 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-1.5 text-primary">
+              <Package className="w-4 h-4" />
+              <p className="text-xs font-medium">{t('stats.productsSoldToday')}</p>
+            </div>
+            <p className="text-xl font-bold mt-1">{productsSoldToday.toLocaleString(numberLocale)}</p>
+          </CardContent>
+        </Card>
         {(can('view_expenses') || can('manage_expenses')) && (
           <Link to="/expenses" className="contents">
             <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">

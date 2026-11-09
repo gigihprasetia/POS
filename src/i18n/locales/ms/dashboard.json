@@ -6,6 +6,7 @@
     "salesToday": "Jualan Hari Ini",
     "transactions": "{{count}} transaksi",
     "profitToday": "Untung Hari Ini",
+    "productsSoldToday": "Produk Terjual Hari Ini",
     "expensesToday": "Perbelanjaan Hari Ini",
     "expenseNotes": "{{count}} catatan"
   },

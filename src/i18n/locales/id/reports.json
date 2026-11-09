@@ -7,15 +7,22 @@
   },
   "tabs": {
     "daily": "Harian",
-    "7days": "7 Hari",
-    "30days": "30 Hari"
+    "weekly": "Mingguan",
+    "monthly": "Bulanan"
   },
   "daily": {
-    "reportDate": "Tanggal Laporan",
+    "fromDate": "Dari Tanggal",
+    "toDate": "Sampai Tanggal",
     "includeExpenses": "Masukkan pengeluaran",
     "includeExpensesHint": "Pengeluaran akan mengurangi laba bersih",
     "printClosingReport": "Cetak Laporan Closing",
-    "noSalesSelectedDate": "* Belum ada transaksi penjualan pada tanggal terpilih"
+    "noSalesSelectedDate": "* Belum ada transaksi penjualan pada rentang tanggal terpilih"
+  },
+  "weekly": {
+    "reportWeek": "Pilih tanggal dalam minggu"
+  },
+  "monthly": {
+    "reportMonth": "Pilih bulan"
   },
   "summary": {
     "transactions": "Transaksi",
@@ -23,7 +30,7 @@
     "profit": "Profit"
   },
   "dailySales": {
-    "title": "Total Penjualan Harian",
+    "title": "Ringkasan Penjualan",
     "grossSales": "Total Omzet",
     "cashIn": "Kas Masuk",
     "avgTransaction": "Rata-rata Transaksi",
@@ -55,6 +62,7 @@
     "title": "Produk Terlaris",
     "daily": "Produk Terlaris Harian",
     "noData": "Belum ada data penjualan",
+    "totalSold": "{{count}} produk terjual",
     "sold": "{{qty}} terjual · laba {{profit}}"
   },
   "fallbacks": {
